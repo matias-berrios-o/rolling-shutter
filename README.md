@@ -12,7 +12,7 @@ Codigo:
   - `create_lists`: Converts .txt files to lists in python.
   - `3d_model`: Creates 2D points from 3D points.
   
-##3d_model
+## 3d_model
   
   class CalibrateCamera:
   
