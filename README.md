@@ -25,3 +25,7 @@ Codigo:
   - Instances a CalibrateCamera variable.
   - def `create_2D_projection` creates projected points on a 2D plane from 3D points and camera attributes.
   - def `projection_correction` distorts projected points to comply with different camera angles.
+
+
+rotation vector: use angles from metashape, uses 1 vector for each image.
+translation: 
