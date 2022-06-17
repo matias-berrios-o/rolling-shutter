@@ -1,4 +1,5 @@
 import cv2 as cv
+from cv2 import imshow
 import numpy as np
 import create_lists as lists
 
@@ -68,7 +69,7 @@ class CalibrateCamera:
     
 
 
-#CANNOT FIGURE OUT OBJECT POINTS AND IMAGE POINTS TYPE TO MAKE IT WORK :()
+#CANNOT FIGURE OUT OBJECT POINTS AND IMAGE POINTS TYPE TO MAKE IT WORK :(
     def calibrate(self):
         #what is gray????? should this be for each picture???
         self.retval_2,self.cam_matrix,self.dist_coeff,self.rotation_vector,self.translation_vector=cv.calibrateCamera(self.object_points, self.image_points, self.gray.shape[::-1], None, None)
@@ -95,8 +96,19 @@ class ProjectPoints:
 
 
     def projections(self,filename,rotation_vector,translation_vector):
+        print(type(rotation_vector))
+        print(translation_vector)
 
         pixels=cv.projectPoints(self.obj_coordinates,rotation_vector,translation_vector,self.camera_matrix,self.distortion_coef)
+        blank_image = np.zeros((4000,4000,3), np.uint8)
+
+        for pixel in pixels[0]:
+            print(pixel[0][0])
+            print(type(pixel[0][0]))
+            blank_image=cv.circle(blank_image,(int(pixel[0][0]),int(pixel[0][1])), radius=5,color=(255,0,0),thickness=-1)
+    
+        imshow("reprojection",blank_image)
+        cv.waitKey(0)
 
         self.projection_pixels.append([filename,pixels[0]])
 
@@ -112,34 +124,65 @@ class ProjectPoints:
             self.projections(filename,rotation_vector,translation_vector)
         
 
+class FindErrors:
+    def __init__(self,pixels_AM,pixels_P):
+       #RAW LISTS DIRECTLY FROM PROJECTPOINTS AND AGISOFTMETASHAPE
+        self.coordinates_AM=pixels_AM
+        self.coordinates_P=pixels_P
+        self.coordinates_CC=[]
 
+        #FILTERED LISTS WITH ACCESSIBLE PIXELS
+        self.coordinates_AM_filter=self.filter_AM()
+        self.coordinates_P_filter=self.filter_P()
+        self.coordinates_CC_filter=self.filter_CC()
 
-def filter(points, images):
-    final=[]
+    #RAW LIST DIRECTLY FROM CALIBRATECAMERA
+    def add_coordinates_CC(self, pixels_BD):
+        self.coordinates_CC=pixels_BD
 
-    for point in points:
-        for image in images:
-            if point[0]==image:
-                final.append(point)
+    def filter_AM(self):
 
-    return final
+        pass
+    
+    def filter_P(self):
+        pass
+
+    def filter_CC(self):
+        new=[]
+        for i in range(len(self.coordinates_CC)):
+            for j in range(len(i[1])):
+                target_name='target '+str(j)
+                target_x=i[1][0][j][0]
+                target_y=i[1][0][j][1]
+                pixel_coord=[i[0],target_name,target_x,target_y]
+                new.append(pixel_coord)
+        return new
+                
+
+def filter(points, image_names):
+    new=[]
+    for i in range(len(points)):
+        for  j in range(len(image_names)):
+            if points[i][0]==image_names[j]:
+                new.append(points[i])
+    return new
 
 if __name__ == '__main__':
     #FINAL: PROJECT POINTS USING 3D TARGETS COORDINATES TAKEN FROM STILL IMAGES AND 3D CAMERA COORDINATES TAKEN FROM MOVING IMAGES.
         #camera= from moving camera coordinates.
         #object_points= from still target coordinates.
         #camera_matrix= from still images.
-    print("START FINAL\n")
-    final_object_points= lists.TARGET_S_COORDINATES
-    final_images= lists.MOVING_IMAGE_PATHS
-    final_camera=lists.CAMERA_M_COORDINATES
-    final_camera_matrix=lists.CAMERA_MATRIX
-    final_distortion_coefs=lists.DISTORTION_COEF
-    final_projectpoints=ProjectPoints(final_images,final_object_points,final_camera,final_camera_matrix,final_distortion_coefs)
-    final_projectpoints.create_projections()
-    print("IMAGE POINTS FROM FINAL_PROJECTPOINTS:\n")
+    #print("START FINAL\n")
+    #final_object_points= lists.TARGET_S_COORDINATES
+    #final_images= lists.MOVING_IMAGE_PATHS
+    #final_camera=lists.CAMERA_M_COORDINATES
+    #final_camera_matrix=lists.CAMERA_MATRIX
+    #final_distortion_coefs=lists.DISTORTION_COEF
+    #final_projectpoints=ProjectPoints(final_images,final_object_points,final_camera,final_camera_matrix,final_distortion_coefs)
+    #final_projectpoints.create_projections()
+    #print("IMAGE POINTS FROM FINAL_PROJECTPOINTS:\n")
     #print(final_projectpoints.projection_pixels)
-    FINAL_REPROJECTION_PIX=final_projectpoints.projection_pixels
+    #FINAL_REPROJECTION_PIX=final_projectpoints.projection_pixels
     
 
     #TEST:
@@ -172,6 +215,33 @@ if __name__ == '__main__':
     test_filter_reprojections=filter(test_projectpoints.projection_pixels,test_images_paths)
     #print(test_filter_reprojections)
     TEST_REPROJECTION_PIX=test_filter_reprojections
+
+    test_projection_metashape=lists.PIXELS_S_COORDINATES
+
+
+
+
+
+
+    final_calibrate=[]
+    for i in test_calibrate.image_points:
+        name=i[0].split("/")
+        image_name=name[2]
+        for j in i[1]:
+            new=[image_name,j[0][0],j[0][1]]
+        final_calibrate.append(new)
+
+    final_reproject=[]
+    for i in test_filter_reprojections:
+        image_name=i[0]
+        for j in i[1]:
+            new=[image_name,j[0][0],j[0][1]]
+        final_reproject.append(new)
+
+
+
+
+
 
 
 
