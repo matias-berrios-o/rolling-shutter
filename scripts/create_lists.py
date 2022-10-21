@@ -1,5 +1,6 @@
 
 import cv2 as cv
+import numpy as np
 
 
 
@@ -9,6 +10,7 @@ PATH_3="scripts/files/camera_s_xyz_ang.txt"
 PATH_4="scripts/files/target_s_xyz.txt"
 PATH_5="scripts/files/pixels_m.txt"
 PATH_6="scripts/files/pixels_s.txt"
+PATH_MATRIX="scripts/files/matrix.txt"
 
 PATH_7="photos/cropped_images"
 
@@ -100,7 +102,7 @@ def only_coordinates(data):
         coordinates=(float(line[1]),float(line[2]),float(line[3]))
         final_coordinates.append(coordinates)
 
-    return final_coordinates
+    return np.array(final_coordinates,dtype=np.float32)
 
 #ONLY FOR CAMERA FILES
 #FILTERS CAMERA DATA OBTAINED FROM CAMERA FILES TO OBTAIN FILENAME, XYZ COORDINATES AND YAW PITCH ROLL COORDINATES
@@ -109,7 +111,13 @@ def camera_coordinates(data):
     final_coordinates=[]
 
     for line in data:
-        coordinates=[line[0],(float(line[1]),float(line[2]),float(line[3])),(float(line[4]),float(line[5]),float(line[6]))]
+        x=float(line[1])
+        y=float(line[2])*-1
+        z=float(line[3])
+        yaw=float(line[4])
+        pitch=float(line[5])
+        roll=float(line[6])
+        coordinates=[line[0],[x,y,z],[yaw,pitch,roll]]
         final_coordinates.append(coordinates)
     return final_coordinates
 
@@ -118,10 +126,12 @@ def camera_coordinates(data):
 #OUTPUT: LIST OF LISTS LIST OF LISTS [["FILEPATH1","target 1",float(x1),float(y1)],["FILEPATH1","target 2",float(x2),float(y2)],....["FILEPATHn","target n",float(xn),float(yn)]]
 def pixel_coordinate(data):
     final_coordinates=[]
-
+    
     for line in data:
-        coordinates=[line[0],line[1],float(line[2]),float(line[3])]
+        coordinates=[line[0],line[1],(float(line[2]),float(line[3]))]
         final_coordinates.append(coordinates)
+
+    
     return final_coordinates
 
 #ONLY FOR CAMERA FILES
@@ -154,6 +164,24 @@ def filter_points(type,data,board_targets):
 
     return new_board_coordinates
 
+
+def np_array_pixels(data):
+    img_paths=[]
+
+    for dat in data:
+        if dat[0] not in img_paths:
+            img_paths.append(dat[0])
+
+    final=[]
+    for img in img_paths:
+        pixels=[]
+        for dat in data:
+            if img==dat[0]:
+                pixels.append(dat[2])
+        pixels=np.array(pixels,dtype=np.float32)
+        final.append([img,pixels])
+    
+    return final
     
 ##TARGETS TO USE:
 #Row 1 : 3 66 6 53 9 63 13
@@ -184,9 +212,10 @@ target_s_filter1=filter_information(type_,s4)
 
 target_s_filter2=targets_xyz_still(target_s_filter1)
 
-target_s_boardfilter=filter_points(type_,target_s_filter2,board_targets)
+#target_s_boardfilter=filter_points(type_,target_s_filter2,board_targets)
 
-target_s_xyz=only_coordinates(target_s_boardfilter)
+target_s_xyz=only_coordinates(target_s_filter2)
+#print(target_s_xyz)
 
 
 #PATH 2: TARGET_M
@@ -197,9 +226,9 @@ target_m_filter1=filter_information(type_,s2)
 
 target_m_filter2=targets_xyz_moving(target_m_filter1)
 
-target_m_boardfilter=filter_points(type_,target_m_filter2,board_targets)
+#target_m_boardfilter=filter_points(type_,target_m_filter2,board_targets)
 
-target_m_xyz=only_coordinates(target_m_boardfilter)
+target_m_xyz=only_coordinates(target_m_filter2)
 
 ###GET CAMERA DATA
 
@@ -217,6 +246,7 @@ m_image_paths=image_paths("photos/moving photos",camera_m_xyz)
 #PATH 3: CAMERA_S
 type_="camera"
 s3=open_files(type_,PATH_3)
+matrix=open_files(type_,PATH_MATRIX)
 
 camera_s_filter1=filter_information(type_,s3)
 
@@ -236,7 +266,9 @@ pixels_m_filter1=filter_information(type_,s5)
 
 pixels_m_xyz=pixel_coordinate(pixels_m_filter1)
 
-pixels_m_boardfilter=filter_points(type_,pixels_m_xyz,board_targets)
+pixels_m_array=np_array_pixels(pixels_m_xyz)
+
+#pixels_m_boardfilter=filter_points(type_,pixels_m_xyz,board_targets)
 
 
 #PATH 6: PIXELS_S
@@ -247,7 +279,11 @@ pixels_s_filter1=filter_information(type_,s6)
 
 pixels_s_xyz=pixel_coordinate(pixels_s_filter1)
 
-pixels_s_boardfilter=filter_points(type_,pixels_s_xyz,board_targets)
+pixels_s_array=np_array_pixels(pixels_s_xyz)
+
+print(pixels_s_array)
+
+#pixels_s_boardfilter=filter_points(type_,pixels_s_xyz,board_targets)
 
 
 
@@ -268,8 +304,8 @@ STILL_IMAGE_PATHS=s_image_paths
 MOVING_IMAGE_PATHS=m_image_paths
 CROPPED_IMAGE_PATHS=cropped_image_paths
 
-PIXELS_S_COORDINATES=pixels_s_boardfilter
-PIXELS_M_COORDINATES=pixels_m_boardfilter
+PIXELS_S_COORDINATES=pixels_s_array
+PIXELS_M_COORDINATES=pixels_m_array
 
 #OPEN CAMERA CALIBRATION XML FILE
 
@@ -277,6 +313,7 @@ cv_file=cv.FileStorage("scripts/opencv_cam_calibration.xml",cv.FILE_STORAGE_READ
 
 CAMERA_MATRIX=cv_file.getNode("Camera_Matrix").mat()
 DISTORTION_COEF=cv_file.getNode("Distortion_Coefficients").mat()
-print("read matrix\n",CAMERA_MATRIX)
-print("read matrix\n",DISTORTION_COEF)
+print("read camera matrix\n",CAMERA_MATRIX)
+print("read distortion matrix\n",DISTORTION_COEF)
+
 cv_file.release()
