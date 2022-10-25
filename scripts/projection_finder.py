@@ -10,22 +10,32 @@ def separate_img_name(filename):
     filename=filename.split("/")
     return filename[2]
 
-#CALIBRATE CAMERA, need more data
+
 class CalibrateCamera:
-    def __init__(self,images,object_points,pixels):
+    def __init__(self,images,object_points):
 
         self.image_points=[]
         self.image_points2=[]
-        self.pixels=pixels
-        self.object_points=[object_points]#list of coordinates
-        self.dist_coeff=[0]
+        self.pixels=None
+        self.object_points=object_points
+        self.dist_coeff=None
+        self.camera_matrix=None
+        self.cam_matrix=[]
+        self.d_coeff=[]
+        self.camera_positions=[]
         self.images=images #list of images
         self.boardSize=(7,5)
         #define columns and rows
         self.criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 30, 0.001)
         #define criteria
 
- 
+    def set_pixels(self,pixels):
+        self.pixels=pixels
+
+    def set_cam_matrix_dist_coefs(self,cam,dc):
+        self.dist_coeff=dc
+        self.camera_matrix=cam
+
     def circles_grid_centers(self):
 
         #To consider: The parameters below depend on pixel distances, areas, etc. The images have to be similar to be able to use the same parameters. For different sets of images, different parameters are needed.
@@ -55,13 +65,11 @@ class CalibrateCamera:
             self.im_with_keypoints = cv.drawKeypoints(self.gray, keypoints, np.array([]), (0,255,0), cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
             #cv.imshow('img',self.im_with_keypoints)
             #cv.waitKey(0)
-            im_with_keypoints_gray = cv.cvtColor(self.im_with_keypoints, cv.COLOR_BGR2GRAY)
             self.retval,self.centers=cv.findCirclesGrid(self.im_with_keypoints, self.boardSize, flags=(cv.CALIB_CB_SYMMETRIC_GRID+cv.CALIB_CB_CLUSTERING),blobDetector=self.blobdetector,parameters=None)
             if self.retval == True: 
               #cornerSubPix(image, corners, winSize, zeroZone, criteria) -> corners
                 self.centers2=cv.cornerSubPix(self.gray, self.centers, (11,11),(-1,-1), self.criteria) 
                 self.image_points.append(self.centers2)
-
 
 
             #image_points with photo name
@@ -75,48 +83,40 @@ class CalibrateCamera:
 
                 #cv.imshow('img',img)
                 #cv.waitKey(0)
-
+        self.pixels=self.image_points
     
     def calibrate(self):
-        #what is gray????? should this be for each picture???
-        print(self.pixels)
-        for pixel in self.pixels[:1]:
-            print(self.object_points)
-            print(pixel[1])
-            
-            self.retval_2,self.cam_matrix,self.dist_coeff,self.rotation_vector,self.translation_vector=cv.calibrateCamera(self.object_points, [pixel[1]], (3200,4800), None, None)
-       # img = cv.imread('newimage') #what do i put in here?
-       # h,  w = img.shape[:2]
-           #print(self.retval_2)
-            #print(self.cam_matrix)
-            #print(self.dist_coeff)
-            #print(self.rotation_vector)
-            #print(self.translation_vector)
-       # self.newcam_mtx, roi=cv.getOptimalNewCameraMatrix(self.cam_matrix,self.dist_coeff,(w,h),1,(w,h))
+        for pixel in self.pixels:
+            retval_2,camera_matrix,dist_coeff,rotation_vector,translation_vector=cv.calibrateCamera(self.object_points, [pixel[1]], (3200,4800), None, None)
+            self.cam_matrix.append(camera_matrix)
+            self.d_coeff.append(dist_coeff)
+            self.camera_positions.append([rotation_vector,translation_vector])
+
+    def solve_pnp(self):
+        pass
 
 
 class ProjectPoints:
 
-    def __init__(self, images,image_points, obj_coordinates_3d, camera_coordinates_3d, cam_matrix,dist_coef):
+    def __init__(self, images,pixels, obj_coordinates, camera_coordinates, cam_matrix,dist_coef,folder_path):
 
-        self.obj_coordinates=np.array(obj_coordinates_3d)
+        self.obj_coordinates=obj_coordinates
+        self.img_size=(3200,4800,3)
         self.images=images
-        self.image_points=image_points
-        self.camera_coordinates=camera_coordinates_3d
+        self.pixels=pixels
+        self.camera_coordinates=camera_coordinates
         self.camera_matrix=cam_matrix
         self.distortion_coef=dist_coef
         self.projection_pixels=[]
-        self.test_images_paths=['DSC09901.JPG','DSC09902.JPG','DSC09905.JPG','DSC09906.JPG','DSC09908.JPG','DSC09909.JPG','DSC09910.JPG','DSC09911.JPG','DSC09912.JPG','DSC09913.JPG','DSC09914.JPG','DSC09939.JPG']
-
+        self.folder_path=folder_path
 
     def projections(self,filename):
         print("Camera rotation vector: "+str(self.rotation_vector))
         print("Camera translation vector: "+str(self.translation_vector))
 
         pixels=cv.projectPoints(self.obj_coordinates,self.rotation_vector,self.translation_vector,self.camera_matrix,self.distortion_coef)
-        print(pixels)
-        blank_image = np.zeros((3200,4800,3), np.uint8)
-        img=cv.imread('photos/still photos/'+str(filename))
+        blank_image = np.zeros(self.img_size, np.uint8)
+        img=cv.imread(str(self.folder_path)+str(filename))
 
         for pixel in pixels[0][1:]:
             new_image=cv.circle(img,(int(pixel[0][0]),int(pixel[0][1])), radius=10,color=(0,255,0),thickness=-1)
@@ -127,18 +127,21 @@ class ProjectPoints:
 
         cv.waitKey(0)
 
-        self.projection_pixels.append([filename,pixels[0]])
+        self.projection_pixels.append([filename,pixels])
 
- 
 
-    def create_projections(self):
-
-        for camera in self.camera_coordinates:
-            filename=camera[0]
-            if filename in self.test_images_paths:
-                print(filename)
+    def create_projections(self,type):
+        if type=="metashape":
+            for camera in self.camera_coordinates:
+                filename=camera[0]
                 self.translation_vector=np.array(camera[1])
                 self.rotation_vector=self.euler_rodrigues(camera[2])
+                self.projections(filename)
+
+        else:
+            for camera in self.camera_coordinates:
+                self.translation_vector=camera[0]
+                self.rotation_vector=camera[1]
                 self.projections(filename)
         
 
@@ -156,6 +159,7 @@ class ProjectPoints:
 
         return new_rotation
         
+
 class FindErrors:
     def __init__(self,pixels_AM,pixels_P):
        #RAW LISTS DIRECTLY FROM PROJECTPOINTS AND AGISOFTMETASHAPE

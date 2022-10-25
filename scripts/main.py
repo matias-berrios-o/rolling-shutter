@@ -1,87 +1,89 @@
 
 import cv2 as cv
-from cv2 import imshow
 import numpy as np
 import create_lists as lists
 from projection_finder import CalibrateCamera, ProjectPoints
 
 if __name__ == '__main__':
-    #FINAL: PROJECT POINTS USING 3D TARGETS COORDINATES TAKEN FROM STILL IMAGES AND 3D CAMERA COORDINATES TAKEN FROM MOVING IMAGES.
-        #camera= from moving camera coordinates.
-        #object_points= from still target coordinates.
-        #camera_matrix= from still images.
-    #print("START FINAL\n")
-    #final_object_points= lists.TARGET_S_COORDINATES
-    #final_images= lists.MOVING_IMAGE_PATHS
-    #final_camera=lists.CAMERA_M_COORDINATES
-    #final_camera_matrix=lists.CAMERA_MATRIX
-    #final_distortion_coefs=lists.DISTORTION_COEF
-    #final_projectpoints=ProjectPoints(final_images,final_object_points,final_camera,final_camera_matrix,final_distortion_coefs)
-    #final_projectpoints.create_projections()
-    #print("IMAGE POINTS FROM FINAL_PROJECTPOINTS:\n")
-    #print(final_projectpoints.projection_pixels)
-    #FINAL_REPROJECTION_PIX=final_projectpoints.projection_pixels
-    
 
-    #TEST:
-    # 1: FINDING PIXELS OF TARGETS IN 12 CROPPED IMAGES WITH CALIBRATECAMERA.
-    # 2: FINDING REPROJECTED PIXELS OF TARGETS WITH PROJECTPOINTS. 
-    # 3: COMPARING 1 AND 2 WITH ORIGINAL PIXELS OBTAINED FROM METASHAPE.
+    ###############TEST 1: COMPARE CAMERA MATRIX AND DISTORTION COEFFICIENTS FROM OPENCV AND METASHAPE
 
-        #camera=from still camera coordinates.
-        #object_points= from still target coordinates.
-        #camera_matrix= from still images.
+    # 1: FIND PIXEL COORDINATES OF TARGETS IN CROPPED IMAGES WITH CALIBRATECAMERA.
+    # 2: FIND CAMERA MATRIX, DISTORTION COEFFICIENTS AND CAMERA POSITIONS WITH CALIBRATECAMERA.
+    # 3: FIND REPROJECTED PIXELS OF TARGETS WITH PROJECTPOINTS.
+        # 3.1: USING CAMERA MATRIX AND DISTORTION COEFFICIENTS FROM METASHAPE.
+        # 3.2: USING CAMERA MATRIX AND DISTORTION COEFFICIENTS FROM CALIBRATECAMERA.
+    # 4: COMPARE PIXELS OBTAINED FROM (# 3).
 
-    print("START TEST\n")
-    test_object_points= lists.TARGET_S_COORDINATES
-    test_images= lists.STILL_IMAGE_PATHS
-
-  
-    test_camera=lists.CAMERA_S_COORDINATES
-    test_camera_matrix=lists.CAMERA_MATRIX
-    test_distortion_coefs=lists.DISTORTION_COEF
-    test_pixels=lists.PIXELS_S_COORDINATES
-
-    #print(test_object_points)
-    test_calibrate=CalibrateCamera(test_images,test_object_points,test_pixels)
-    #test_calibrate.circles_grid_centers()
-    #print(test_calibrate.object_points)
-
-    print("\nIMAGE POINTS FROM TEST_CAMERA CALIBRATION:\n")
-    print(test_calibrate.pixels)
-    test_calibrate.calibrate()
-
-    #TEST_CALIBRATION_PIX=test_calibrate.image_points
-    #test_projectpoints=ProjectPoints(test_images,test_calibrate.image_points,test_object_points,test_camera,test_camera_matrix,test_distortion_coefs)
-    #test_projectpoints.create_projections()
-    #print("\nIMAGE POINTS FROM TEST_PROJECTPOINTS:\n")
-    #test_images_paths=['DSC09901.JPG','DSC09902.JPG','DSC09905.JPG','DSC09906.JPG','DSC09908.JPG','DSC09909.JPG','DSC09910.JPG','DSC09911.JPG','DSC09912.JPG','DSC09913.JPG','DSC09914.JPG','DSC09939.JPG']
-    #test_filter_reprojections=filter(test_projectpoints.projection_pixels,test_images_paths)
-    #print(test_filter_reprojections)
-    #TEST_REPROJECTION_PIX=test_filter_reprojections
+        # DATA USED:
+        # camera positions = from CalibrateCamera.
+        # object points = from still target coordinates.
+        # camera matrix and dist. coeff. = from CalibrateCamera.
+        # camera matrix and dist. coeff. = from Metashape.
+        # images = from cropped images.
 
 
+    print("START TEST 1\n")
+
+    folder_path1='photos/cropped_images/'
+    test1_object_points= lists.TARGET_S_COORDINATES
+    test1_images= lists.CROPPED_IMAGE_PATHS
+    test1_camera_matrix=lists.CAMERA_MATRIX
+    test1_distortion_coef=lists.DISTORTION_COEF
+    test1_calibrate=CalibrateCamera(test1_images,test1_object_points)
+    test1_calibrate.circles_grid_centers() #finds pixel coordinates for images
+    test1_calibrate.calibrate() #finds camera matrix, dist. coefficients and camera rotation translation vectors for each image
+
+    #check the camera matrix and d. coefficients lists to see if they are all the same, by default I am using the first ones.
+    cam_matrix_opencv=test1_calibrate.cam_matrix[0]
+    d_coefficients_opencv=test1_calibrate.d_coeff[]0
+    test1_project_opencv=ProjectPoints(test1_images,test1_calibrate.image_points2,test1_object_points,test1_calibrate.camera_positions,cam_matrix_opencv,d_coefficients_opencv,folder_path1)
+    test1_project_opencv.create_projections("opencv")
+
+    test1_project_metashape=ProjectPoints(test1_images,test1_calibrate.image_points2,test1_object_points,test1_calibrate.camera_positions,test1_camera_matrix,test1_distortion_coef,folder_path1)
+    test1_project_metashape.create_projections("metashape")
 
 
+    ###############TEST 2: COMPARE CAMERA POSITIONS FROM OPENCV AND METASHAPE
 
+    # 1: FIND CAMERA POSITIONS WITH CALIBRATECAMERA USING STILL IMAGES.
+    # 2: FIND REPROJECTED PIXELS OF TARGETS WITH PROJECTPOINTS USING STILL IMAGES.
+        # 2.1: USING CAMERA POSITIONS FROM METASHAPE.
+        # 2.2: USING CAMERA POSITIONS FROM CALIBRATECAMERA.
+    # 3: COMPARE (# 2) WITH ORIGINAL PIXELS OBTAINED FROM METASHAPE WITH FINDERRORS.
 
-    #final_calibrate=[]
-    #for i in test_calibrate.image_points:
-        #name=i[0].split("/")
-        #image_name=name[2]
-        #for j in i[1]:
-            #new=[image_name,j[0][0],j[0][1]]
-        #final_calibrate.append(new)
+        # DATA USED:
+        # camera positions= from still camera coordinates and CalibrateCamera.
+        # object points = from still target coordinates.
+        # camera matrix1 and dist. coeff.1 = from Metashape.
+        # camera matrix2 and dist. coeff.2 = from CalibrateCamera.
+        # images = from still images.
 
-    #final_reproject=[]
-    #for i in test_filter_reprojections:
-        #image_name=i[0]
-        #for j in i[1]:
-            #new=[image_name,j[0][0],j[0][1]]
-        #final_reproject.append(new)
+    print("START TEST 2\n")
 
+    folder_path2='photos/still photos/'
+    test2_object_points= lists.TARGET_S_COORDINATES
+    test2_images= lists.STILL_IMAGE_PATHS
+    test2_camera=lists.CAMERA_S_COORDINATES
+    test2_camera_matrix=lists.CAMERA_MATRIX
+    test2_distortion_coefs=lists.DISTORTION_COEF
+    test2_pixels=lists.PIXELS_S_COORDINATES
 
+    test2_calibrate=CalibrateCamera(test2_images,test2_object_points)
+    test2_calibrate.set_pixels(test2_pixels)
+    test2_calibrate.solve_pnp()
 
+    #Comparing camera positions given by Opencv and Metashape: using camera matrix and dist. coefficients from Metashape
+    test2_project_opencv=ProjectPoints(test2_images,test2_pixels,test2_object_points,test2_calibrate.camera_positions,test2_camera_matrix,test2_distortion_coefs,folder_path2)
+    test2_project_opencv.create_projections("opencv")
+    test2_project_metashape=ProjectPoints(test2_images,test2_pixels,test2_object_points,test2_camera,test2_camera_matrix,test2_distortion_coefs,folder_path2)
+    test2_project_metashape.create_projections("metashape")
+
+    #Comparing camera positions given by OpenCv and Metashape: using camera matrix and dist. coefficients from Test1 Opencv
+    test2_project_opencv=ProjectPoints(test2_images,test2_pixels,test2_object_points,test2_calibrate.camera_positions,cam_matrix_opencv,d_coefficients_opencv,folder_path2)
+    test2_project_opencv.create_projections("opencv")
+    test2_project_metashape=ProjectPoints(test2_images,test2_pixels,test2_object_points,test2_camera,cam_matrix_opencv,d_coefficients_opencv,folder_path2)
+    test2_project_metashape.create_projections("metashape")
 
 
 

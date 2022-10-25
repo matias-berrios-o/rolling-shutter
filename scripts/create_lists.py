@@ -94,7 +94,7 @@ def targets_xyz_moving(data_targets):
 
 #ONLY FOR TARGET FILES
 #RECEIVES A LIST OF LISTS OF TARGET COORDINATES WITH TARGET NAME, ELIMINATES THE TARGET NAME TO ONLY LEAVE THE TARGET COORDINATES
-#OUTPUT: LIST OF TUPLES [(float(x1),float(y1),float(z1)),(float(x2),float(y2),float(z2)),....(float(xn),float(yn),float(zn))]
+#OUTPUT: ARRAY OF LIST OF TUPLES [(float(x1),float(y1),float(z1)),(float(x2),float(y2),float(z2)),....(float(xn),float(yn),float(zn))]
 def only_coordinates(data):
     final_coordinates=[]
 
@@ -183,6 +183,97 @@ def np_array_pixels(data):
     
     return final
     
+
+
+
+###GET TARGET DATA
+
+#PATH 4: TARGET_S
+
+type_="target"
+s4=open_files(type_,PATH_4)
+
+target_s_filter1=filter_information(type_,s4)
+
+target_s_filter2=targets_xyz_still(target_s_filter1)
+
+target_s_xyz=only_coordinates(target_s_filter2)
+
+
+
+#PATH 2: TARGET_M
+
+type_="target"
+s2=open_files(type_,PATH_2)
+
+target_m_filter1=filter_information(type_,s2)
+
+target_m_filter2=targets_xyz_moving(target_m_filter1)
+
+target_m_xyz=only_coordinates(target_m_filter2)
+
+
+
+###GET CAMERA DATA
+
+#PATH 1: CAMERA_M
+
+type_="camera"
+s1=open_files(type_,PATH_1)
+
+camera_m_filter1=filter_information(type_,s1)
+
+camera_m_xyz=camera_coordinates(camera_m_filter1)
+
+m_image_paths=image_paths("photos/moving photos",camera_m_xyz)
+
+
+#PATH 3: CAMERA_S
+
+type_="camera"
+s3=open_files(type_,PATH_3)
+
+matrix=open_files(type_,PATH_MATRIX)
+
+camera_s_filter1=filter_information(type_,s3)
+
+camera_s_xyz=camera_coordinates(camera_s_filter1)
+
+s_image_paths=image_paths("photos/still photos",camera_s_xyz)
+
+
+
+
+###GET PIXEL DATA
+
+#PATH 5: PIXELS_M
+
+type_="pixel"
+s5=open_files(type_,PATH_5)
+
+pixels_m_filter1=filter_information(type_,s5)
+
+pixels_m_xyz=pixel_coordinate(pixels_m_filter1)
+
+pixels_m_array=np_array_pixels(pixels_m_xyz)
+
+
+
+#PATH 6: PIXELS_S
+
+type_="pixel"
+s6=open_files(type_,PATH_6)
+
+pixels_s_filter1=filter_information(type_,s6)
+
+pixels_s_xyz=pixel_coordinate(pixels_s_filter1)
+
+pixels_s_array=np_array_pixels(pixels_s_xyz)
+
+
+
+###DATA FOR TEST 1:
+
 ##TARGETS TO USE:
 #Row 1 : 3 66 6 53 9 63 13
 #Row 2 : 50 157 60 159 57 161 55
@@ -198,101 +289,27 @@ board_targets=["target 3","target 66","target 6","target 53","target 9","target 
 
 board_targets.sort(key=lambda x: int(x[7:len(x)]))
 
+cropped_pixels_boardfilter=filter_points(type_,pixels_s_xyz,board_targets)
 
+cropped_pixels_array=np_array_pixels(cropped_pixels_boardfilter)
 
-####PRUEBA
+cropped_targets_boardfilter=filter_points(type_,target_s_filter2,board_targets)
 
-###GET TARGET DATA
-
-#PATH 4: TARGET_S
-type_="target"
-s4=open_files(type_,PATH_4)
-
-target_s_filter1=filter_information(type_,s4)
-
-target_s_filter2=targets_xyz_still(target_s_filter1)
-
-#target_s_boardfilter=filter_points(type_,target_s_filter2,board_targets)
-
-target_s_xyz=only_coordinates(target_s_filter2)
-#print(target_s_xyz)
-
-
-#PATH 2: TARGET_M
-type_="target"
-s2=open_files(type_,PATH_2)
-
-target_m_filter1=filter_information(type_,s2)
-
-target_m_filter2=targets_xyz_moving(target_m_filter1)
-
-#target_m_boardfilter=filter_points(type_,target_m_filter2,board_targets)
-
-target_m_xyz=only_coordinates(target_m_filter2)
-
-###GET CAMERA DATA
-
-#PATH 1: CAMERA_M
-type_="camera"
-s1=open_files(type_,PATH_1)
-
-camera_m_filter1=filter_information(type_,s1)
-
-camera_m_xyz=camera_coordinates(camera_m_filter1)
-
-m_image_paths=image_paths("photos/moving photos",camera_m_xyz)
-
-
-#PATH 3: CAMERA_S
-type_="camera"
-s3=open_files(type_,PATH_3)
-matrix=open_files(type_,PATH_MATRIX)
-
-camera_s_filter1=filter_information(type_,s3)
-
-camera_s_xyz=camera_coordinates(camera_s_filter1)
-
-s_image_paths=image_paths("photos/still photos",camera_s_xyz)
+cropped_targets_xyz=only_coordinates(cropped_targets_boardfilter)
 
 cropped_image_paths=image_paths(PATH_7,camera_s_xyz)
 
-###GET PIXEL DATA
-
-#PATH 5: PIXELS_M
-type_="pixel"
-s5=open_files(type_,PATH_5)
-
-pixels_m_filter1=filter_information(type_,s5)
-
-pixels_m_xyz=pixel_coordinate(pixels_m_filter1)
-
-pixels_m_array=np_array_pixels(pixels_m_xyz)
-
-#pixels_m_boardfilter=filter_points(type_,pixels_m_xyz,board_targets)
-
-
-#PATH 6: PIXELS_S
-type_="pixel"
-s6=open_files(type_,PATH_6)
-
-pixels_s_filter1=filter_information(type_,s6)
-
-pixels_s_xyz=pixel_coordinate(pixels_s_filter1)
-
-pixels_s_array=np_array_pixels(pixels_s_xyz)
-
-print(pixels_s_array)
-
-#pixels_s_boardfilter=filter_points(type_,pixels_s_xyz,board_targets)
-
-
-
 ####VARIABLES FOR EXPORTING
 
-#Targets used are given by and sorted in the same order as 'board_targets'.
-#Target coordinates are given in X,Y,Z order. List of tuples.
-#Cameras are given in FILENAME,X,Y,Z,YAW,PITCH,ROLL. List of lists.
-#pixels are given in FILENAME,TARGET NAME,X,Y order. List of lists.
+# Targets used in TEST 1 are given by and sorted in the same order as 'board_targets'.
+
+# TARGETS: np.array([(x,y,z)],dtype=np.float32), array of XYZ coordinates of each target.
+
+# CAMERA COORDINATES: [FILENAME,[X,Y,Z],[YAW,PITCH,ROLL]], list of lists. Each line contains the image path and the camera position for the image.
+
+# PIXELS: [FILENAME, np.array(pixels,dtype=np.float32)], list of lists. Each line contains the image path and an array of the pixel coordinates for each target.
+
+# IMAGE PATHS: ["FOLDER/FILEPATH], list of strings. Each line contains the folder and filepath for each image, FOLDER: "photos/moving photos" or "photos/still photos".
 
 TARGET_S_COORDINATES=target_s_xyz
 TARGET_M_COORDINATES=target_s_xyz
@@ -307,7 +324,7 @@ CROPPED_IMAGE_PATHS=cropped_image_paths
 PIXELS_S_COORDINATES=pixels_s_array
 PIXELS_M_COORDINATES=pixels_m_array
 
-#OPEN CAMERA CALIBRATION XML FILE
+# OPEN METASHAPE CAMERA CALIBRATION XML FILE
 
 cv_file=cv.FileStorage("scripts/opencv_cam_calibration.xml",cv.FILE_STORAGE_READ)
 
